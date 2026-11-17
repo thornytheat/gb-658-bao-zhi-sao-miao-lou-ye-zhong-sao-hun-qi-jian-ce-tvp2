@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="kpis">
+  <div class="kpi"><b>目录</b><strong>2</strong><small>个</small></div>
+  <div class="kpi"><b>合并</b><strong>1</strong><small>次</small></div>
+  <div class="kpi"><b>待裁决</b><strong>1</strong><small>页</small></div>
+  <div class="kpi"><b>规则版</b><strong>1.7</strong><small>v</small></div>
+</section>
+<div class="grid grid--receipt">
+  <section class="panel">
+    <div class="panel__head"><h2>目录合并</h2><span class="state state--ok">通过</span></div>
+    <div class="panel__body panel__body--scroll">
+      <table class="ledger"><thead><tr><th>序号</th><th>业务键</th><th>状态</th><th class="num">值</th></tr></thead>
+      <tbody>{% for row in rows %}<tr><td class="num">{{ loop.index }}</td><td>{{ row.key }}</td><td>{{ row.status }}</td><td class="num">{{ row.value }}</td></tr>{% endfor %}</tbody></table>
+    </div>
+  </section>
+  <section class="panel panel--evidence">
+    <div class="panel__head"><h2>证据</h2><span class="panel__meta">3 条</span></div>
+    <div class="panel__body"><div class="evidence"><b>MRG-1</b><span>ORIGINAL IDENTITY</span><code>/api/catalogs/merge</code></div><pre id="result">等待运行</pre></div>
+  </section>
+  <section class="panel panel--status">
+    <div class="panel__head"><h2>原因分布</h2><span class="panel__meta">2 类</span></div>
+    <div class="panel__body"><div class="bar"><i style="width:64%"></i></div><div class="legend"><span>迁移 9</span><span>待裁决 1</span></div></div>
+  </section>
+</div>
+{% endblock %}

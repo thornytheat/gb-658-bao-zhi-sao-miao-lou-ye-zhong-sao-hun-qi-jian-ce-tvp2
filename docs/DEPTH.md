@@ -14,6 +14,7 @@
 | M4 重扫判定 | 比较扫描候选并保留清晰版本 | POST /api/rescans/evaluate | `app/modules/m4_rescans/similarity.py` `app/modules/m4_rescans/decision.py` | `tests/test_m4_rescans.py` |
 | M5 混期归因 | 用页眉和页码证据裁决混期 | POST /api/mixed/evaluate | `app/modules/m5_mixed/evidence.py` `app/modules/m5_mixed/conflicts.py` | `tests/test_m5_mixed.py` |
 | M6 批次对账 | 检查四账并导出证据 | POST /api/reconcile | `app/modules/m6_batches/compare.py` `app/modules/m6_batches/exporter.py` | `tests/test_m6_batches.py` |
+| M7 目录合并 | 登记清单、合并同版目录、撤回误合并 | POST /api/catalogs/register, /merge, /retract | `app/modules/m7_catalogs/service.py` `app/modules/m7_catalogs/schema.py` | `tests/test_m7_catalogs.py` |
 
 ## 陷阱登记
 
@@ -29,12 +30,27 @@
 | TRAP-19 | 候选顺序改变 | 先到者决定保留项 | 显式排序键保持顺序无关 | `app/modules/m3_pages/sequence.py` | `tests/test_m3_pages.py::test_selection_order_independent` |
 | TRAP-22 | 同内容多别名 | 合并顺序改变代表扫描 | 清晰度后以时间和文件名择一 | `app/modules/m4_rescans/decision.py` | `tests/test_m4_rescans.py::test_selection_is_deterministic_on_tie` |
 | TRAP-26 | 陈旧重扫晚提交 | 旧版本覆盖新版 | 版本优先于输入顺序 | `app/modules/m3_pages/sequence.py` | `tests/test_m3_pages.py::test_higher_version_wins_not_later_input` |
+| TRAP-27 | 同期报纸登记成两个目录 | 改业务键导致旧验收凭据断引用；保留双目录重复报缺页 | 当前归属与原始身份分离，合并只改归属并记录映射依据 | `app/modules/m7_catalogs/service.py` | `tests/test_m7_catalogs.py::test_merge_keeps_original_identity_for_old_credentials` |
+| TRAP-28 | 合并时同页不同扫描相撞 | 按清晰度直接丢件 | 挂起为冲突待人工裁决，双方都保留 | `app/modules/m7_catalogs/service.py` | `tests/test_m7_catalogs.py::test_same_page_different_scan_is_held_not_dropped_by_clarity` |
+| TRAP-29 | 合并中途中断后重试 | 重复插入扫描件 | 迁移账本逐件提交，从中断处续做，不新增扫描 | `app/modules/m7_catalogs/service.py` | `tests/test_m7_catalogs.py::test_interrupted_merge_resumes_without_duplicate_scans` |
+| TRAP-30 | 合并、撤回与新清单并发 | 陈旧操作按旧视图覆盖新状态 | 目录版本校验，过期操作 409 拒绝 | `app/modules/m7_catalogs/schema.py` | `tests/test_m7_catalogs.py::test_stale_merge_version_is_rejected` |
+| TRAP-31 | 撤回误合并带走后来归入的扫描 | 整目录回滚或删键 | 只回放本次合并的迁移账本，后来的扫描留在原处 | `app/modules/m7_catalogs/service.py` | `tests/test_m7_catalogs.py::test_retract_restores_only_this_merge_and_keeps_later_scans` |
 
 ## 对账规则
 
 - 应有页数 = 唯一采纳页 + 缺页数。
 - 扫描件数 = 唯一采纳 + 被替代重扫 + 混期 + 隔离。
 - 同一输入与规则版本重跑，运行标识和结果行数不变。
+
+## 目录合并规则（M7）
+
+- 扫描件始终保存原始身份（`original_catalog_id`/`original_key`/`original_business_key`）；合并只改当前归属（`catalog_id`）。
+- 验收凭据按原始身份核验：`POST /api/catalogs/verify` 不因合并而失效，并返回迁移合并与映射依据。
+- 同页同摘要为重复件（`DUPLICATE`），不计页；同页不同扫描为冲突（`CONFLICT`）并挂起，不按清晰度丢件，须人工裁决。
+- 合并逐件提交迁移账本；中断后重试从首个无账本记录的扫描继续，不新增扫描。已完成合并重试为幂等重放。
+- 合并、撤回、登记、裁决均受目录版本约束；携带过期版本号返回 409 `STALE_CATALOG`。合并进行中拒绝该目录的新登记。
+- 撤回只还原本次合并账本内的扫描；后来归入的扫描、后续合并的目录、已裁决的冲突不会被带走。
+- 目录统计给出扫描总数、状态分布、页序缺口（`missing_pages`）、重复页与覆盖率。
 
 ## 已知不覆盖
 

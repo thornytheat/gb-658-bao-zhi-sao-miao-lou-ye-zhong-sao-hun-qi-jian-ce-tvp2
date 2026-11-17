@@ -16,6 +16,7 @@ docker compose up --build
 - M4 重扫判定：页面 /rescans，接口 /api/rescans/evaluate
 - M5 混期归因：页面 /mixed，接口 /api/mixed/evaluate
 - M6 批次对账：页面 /batches，接口 /api/reconcile
+- M7 目录合并：页面 /catalogs，接口 /api/catalogs/register、/api/catalogs/merge、/api/catalogs/retract
 
 ## 运行规则
 
